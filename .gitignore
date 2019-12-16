@@ -1,0 +1,6 @@
+sha256sum.txt
+*.exe
+*.run
+.idea
+config.ini
+config_test.ini

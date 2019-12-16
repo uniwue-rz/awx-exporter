@@ -1,0 +1,25 @@
+[AWX]
+HostName='https://host'
+UserName='admin'
+Token=''
+InventorySources=''
+TimeOut = 10s
+
+[PROMETHEUS]
+ConfigName='prometheus_config'
+ConfigHostOverride=True
+HostNameVar='cmdb_name'
+IpVar='ansible_host'
+
+[ALERTMANAGER]
+ConfigName='alertmanager_config'
+SourceFile='/etc/alertmanager/alertmanager.yml'
+RequireTLSDefault=False
+SendResolveDefault=True
+
+[BLACKBOX]
+ConfigName='blackbox_config'
+IgnoredGroups='cmdb_imported,guests,sles11_64Guest,sles12_64Guest,sles12_64Guest,sles12_64Guest,sles12_64Guest,windows9Server64Guest,ubuntu64Guest'
+HostNameVar='cmdb_name'
+IpVar='ansible_ssh_host'
+
