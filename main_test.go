@@ -14,8 +14,9 @@ import (
 func TestReadConfiguration(t *testing.T) {
 	configFile := "config_test.ini"
 	config := readConfiguration(configFile)
+	awxHost := os.Getenv("AWX_HOST")
 	// Awx Settings test
-	if config.awx.Host != "https://awx.rz.uni-wuerzburg.de" {
+	if config.awx.Host != awxHost {
 		t.Errorf("Hosts are not the same")
 	}
 	if config.awx.Token != "testToken" {
