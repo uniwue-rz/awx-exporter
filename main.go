@@ -227,7 +227,7 @@ func createPrometheusHosts(
 			labels.Job = fmt.Sprintf("%v", prometheusJobName)
 		}
 		if prometheusPort, ok := promSingleNode.(map[string]interface{})["port"]; ok {
-			target := fmt.Sprintf("%s:%.0f", labels.Host, prometheusPort)
+			target := fmt.Sprintf("%s:%.0f", labels.IP, prometheusPort)
 			targets = append(targets, target)
 		}
 		prometheusHost.Labels = labels

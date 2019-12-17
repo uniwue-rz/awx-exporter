@@ -12,5 +12,5 @@ type AlertManagerEmailNotifier struct {
 
 /// getReceiverName Returns the receiver name
 func (alertManagerEmailNotifier *AlertManagerEmailNotifier) getReceiverName() string {
-	return fmt.Sprintf("dynamic-%s-%s-receiver", alertManagerEmailNotifier.Group, alertManagerEmailNotifier.Name)
+	return fmt.Sprintf("dynamic-%s-email-%s", alertManagerEmailNotifier.Group, alertManagerEmailNotifier.Name)
 }
