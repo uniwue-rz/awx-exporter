@@ -2,5 +2,6 @@ sha256sum.txt
 *.exe
 *.run
 .idea
+alertmanager.yaml
 config.ini
 config_test.ini

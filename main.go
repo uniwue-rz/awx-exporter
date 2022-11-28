@@ -1,7 +1,6 @@
 package main
 
 import (
-	altMgrConfig "./alertmanager/config"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -14,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	altMgrConfig "github.com/uniwue-rz/awx-exporter/alertmanager/config"
 
 	"gopkg.in/ini.v1"
 )
@@ -60,7 +60,7 @@ type Config struct {
 }
 
 /// Creates a new AWX request that can be used for the query
-func createAuthenticateAWXRequest(config Config, path string, method string, body io.Reader, withoutPrefix bool) *http.Request {
+func createAuthenticateAWXRequest(config Config, path string, method string, body io.Reader, withoutPrefix bool) (*http.Request, error) {
 	fullUrl := fmt.Sprintf("%s/api/v2/%s", config.awx.Host, path)
 	if withoutPrefix {
 		fullUrl = fmt.Sprintf("%s%s", config.awx.Host, path)
@@ -71,12 +71,18 @@ func createAuthenticateAWXRequest(config Config, path string, method string, bod
 	}
 	bearerToken := fmt.Sprintf("Bearer %s", config.awx.Token)
 	req.Header.Set("Authorization", bearerToken)
-	return req
+	return req, err
 }
 
 /// sendRequest Sends the request with the given configuration
-func sendRequest(r *http.Request, config Config) *http.Response {
+func sendRequest(r *http.Request, err error, config Config) *http.Response {
 	client := http.Client{Timeout: config.awx.Timeout}
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		for key, val := range via[0].Header {
+			req.Header[key] = val
+		}
+		return err
+	}
 	data, err := client.Do(r)
 	if err != nil {
 		log.Fatal("Error sending the request", err)
@@ -92,14 +98,14 @@ func getInventories(config Config, inventoryName string) InventoryResult {
 	} else {
 		path = "inventories"
 	}
-	request := createAuthenticateAWXRequest(config, path, "GET", nil, false)
-	response := sendRequest(request, config)
+	request, err := createAuthenticateAWXRequest(config, path, "GET", nil, false)
+	response := sendRequest(request, err, config)
 	if response.StatusCode != 200 {
 		log.Fatalf("Server returns error status %d", response.StatusCode)
 	}
 	decoder := json.NewDecoder(response.Body)
 	var results InventoryResult
-	err := decoder.Decode(&results)
+	err = decoder.Decode(&results)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -114,14 +120,14 @@ func getGroups(config Config, searchQuery string) GroupResults {
 	} else {
 		path = "groups"
 	}
-	request := createAuthenticateAWXRequest(config, path, "GET", nil, false)
-	response := sendRequest(request, config)
+	request, err := createAuthenticateAWXRequest(config, path, "GET", nil, false)
+	response := sendRequest(request, err, config)
 	if response.StatusCode != 200 {
 		log.Fatalf("Server returns error status %d", response.StatusCode)
 	}
 	decoder := json.NewDecoder(response.Body)
 	var results GroupResults
-	err := decoder.Decode(&results)
+	err = decoder.Decode(&results)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -136,14 +142,14 @@ func getHosts(config Config, searchQuery string) HostResults {
 	} else {
 		path = "hosts"
 	}
-	request := createAuthenticateAWXRequest(config, path, "GET", nil, false)
-	response := sendRequest(request, config)
+	request, err := createAuthenticateAWXRequest(config, path, "GET", nil, false)
+	response := sendRequest(request, err, config)
 	if response.StatusCode != 200 {
 		log.Fatalf("Server returns error status %d", response.StatusCode)
 	}
 	decoder := json.NewDecoder(response.Body)
 	var results HostResults
-	err := decoder.Decode(&results)
+	err = decoder.Decode(&results)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -152,11 +158,11 @@ func getHosts(config Config, searchQuery string) HostResults {
 
 /// getGroupsHosts Returns the hosts that belong to a given group
 func getGroupHost(config Config, group Group) HostResults {
-	request := createAuthenticateAWXRequest(config, group.Related.Hosts, "GET", nil, true)
-	response := sendRequest(request, config)
+	request, err := createAuthenticateAWXRequest(config, group.Related.Hosts, "GET", nil, true)
+	response := sendRequest(request, err, config)
 	decoder := json.NewDecoder(response.Body)
 	var results HostResults
-	err := decoder.Decode(&results)
+	err = decoder.Decode(&results)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -166,15 +172,15 @@ func getGroupHost(config Config, group Group) HostResults {
 ///getHostVariables Returns the host data that should be used.
 func getHostVariables(config Config, host Host) map[string]interface{} {
 	vars := make(map[string]interface{})
-	request := createAuthenticateAWXRequest(
+	request, err := createAuthenticateAWXRequest(
 		config,
 		host.Related.VariableData,
 		"GET",
 		nil,
 		true)
-	response := sendRequest(request, config)
+	response := sendRequest(request, err, config)
 	decoder := json.NewDecoder(response.Body)
-	err := decoder.Decode(&vars)
+	err = decoder.Decode(&vars)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -184,15 +190,15 @@ func getHostVariables(config Config, host Host) map[string]interface{} {
 /// getGroupVariables Returns the group variables for the
 func getGroupVariables(config Config, group Group) map[string]interface{} {
 	vars := make(map[string]interface{})
-	request := createAuthenticateAWXRequest(
+	request, err := createAuthenticateAWXRequest(
 		config,
 		group.Related.VariableData,
 		"GET",
 		nil,
 		true)
-	response := sendRequest(request, config)
+	response := sendRequest(request, err, config)
 	decoder := json.NewDecoder(response.Body)
-	err := decoder.Decode(&vars)
+	err = decoder.Decode(&vars)
 	if err != nil {
 		log.Fatal("There was an error decoding the results", err)
 	}
@@ -208,8 +214,7 @@ func createPrometheusHosts(
 	prometheusHosts []PrometheusHost) []PrometheusHost {
 	// Set the prometheus config to host one if the host has any setting
 	// and host override is set to true
-	if hostPrometheusConfig, ok := hostVariables[config.prometheus.configName];
-		ok && config.prometheus.configHostOverride {
+	if hostPrometheusConfig, ok := hostVariables[config.prometheus.configName]; ok && config.prometheus.configHostOverride {
 		prometheusConfig = hostPrometheusConfig
 	}
 	for _, promSingleNode := range prometheusConfig.([]interface{}) {
